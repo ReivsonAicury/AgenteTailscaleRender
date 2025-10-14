@@ -1,0 +1,22 @@
+# Ficheiro de Blueprint do Render (Infraestrutura como Código)
+# https://render.com/docs/blueprint-spec
+
+services:
+  # Define o nosso serviço
+  - name: ubuntu-tailscale-agent
+    # O tipo 'worker' é ideal para processos de fundo que não precisam de uma porta web.
+    # Isto evita os problemas de reinicialização automática que vimos anteriormente.
+    type: worker
+    # Indica ao Render para construir o serviço a partir de um Dockerfile
+    env: docker
+    # Aponta para o repositório Git onde estes ficheiros estão.
+    # O Render preencherá isto automaticamente se o ficheiro estiver no repositório.
+    repo: https://github.com/ReivsonAicury/AgenteTailscaleRender # <-- ALTERE ISTO!
+    # Especifica a ramificação a ser usada
+    branch: main
+    # Define as variáveis de ambiente necessárias
+    envVars:
+      - key: TAILSCALE_AUTHKEY
+        # 'fromSecret' indica ao Render para obter o valor de um 'Secret Group'
+        # Isto é mais seguro do que colocar a chave diretamente no ficheiro.
+        fromSecret: true
