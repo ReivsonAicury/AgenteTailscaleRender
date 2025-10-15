@@ -6,7 +6,7 @@ services:
   - name: ubuntu-tailscale-agent
     type: worker
     region: virginia
-    plan: free
+    plan: standard
     runtime: docker
     # Aponta para o repositório Git onde estes ficheiros estão.
     # O Render preencherá isto automaticamente se o ficheiro estiver no repositório.
