@@ -1,24 +1,40 @@
-#!/bin/sh
-# 'set -e' garante que o script sairá imediatamente se um comando falhar
-set -e
+#!/usr/bin/env bash
+set -euxo pipefail
 
-# 1. Inicia o serviço do Tailscale (tailscaled) em segundo plano
-# --tun=userspace-networking é necessário para ambientes de contentores sem privilégios como o Render
-tailscaled --tun=userspace-networking &
+echo "Iniciando Tailscale em modo userspace com proxies..."
 
-# 2. Inicia o cliente Tailscale (tailscale up)
-# --authkey=${TAILSCALE_AUTHKEY} utiliza a chave secreta para se juntar à sua rede
-# --hostname=ubuntu-on-render define o nome que esta máquina terá no painel do Tailscale
-# --accept-dns=false impede que o Tailscale altere o DNS interno do Render
-tailscale up --authkey=${TAILSCALE_AUTHKEY} --hostname=ubuntu-on-render --accept-dns=false
+# Iniciar Tailscale userspace com proxies SOCKS5 e HTTP para egress
+tailscaled --tun=userspace-networking \
+  --socks5-server=localhost:1055 \
+  --outbound-http-proxy-listen=localhost:1055 &
 
-# 3. Aguarda alguns segundos para garantir que a conexão Tailscale está estável
-echo "Aguardando a conexão Tailscale..."
-sleep 5
-echo "Conexão estabelecida."
+# Aguardar um momento para o tailscaled inicializar
+sleep 2
 
-# 4. Comando para manter o contentor a correr indefinidamente
-# Como este é um 'Background Worker', ele precisa de um processo que não termine.
-# 'tail -f /dev/null' é um truque comum para manter um contentor vivo.
-echo "O contentor está a correr. Use o 'Shell' do Render para interagir."
+# Conectar à rede Tailscale
+# Usar o nome do serviço do Render como hostname se disponível
+HOSTNAME=${RENDER_SERVICE_NAME:-"ubuntu-on-render"}
+tailscale up --authkey="${TAILSCALE_AUTHKEY}" --hostname="${HOSTNAME}" --accept-dns=false
+
+echo "Tailscale conectado com hostname: ${HOSTNAME}"
+
+# Configurar variáveis de ambiente para roteamento via proxies Tailscale
+# socks5h resolve DNS através do proxy (útil para MagicDNS)
+export ALL_PROXY="socks5h://localhost:1055"
+export HTTP_PROXY="http://localhost:1055"
+export HTTPS_PROXY="http://localhost:1055"
+
+echo "Proxies configurados:"
+echo "  ALL_PROXY: ${ALL_PROXY}"
+echo "  HTTP_PROXY: ${HTTP_PROXY}"
+echo "  HTTPS_PROXY: ${HTTPS_PROXY}"
+
+# Verificar status da conexão
+tailscale status
+
+echo "Tailscale configurado com sucesso!"
+echo "O contentor está rodando. Use o Shell do Render para interagir."
+echo "Todas as conexões de saída serão roteadas através do Tailscale."
+
+# Manter o contentor ativo
 tail -f /dev/null

@@ -1,25 +1,25 @@
-# 1. Utilizar a imagem base do Ubuntu mais recente
-FROM ubuntu:latest
+FROM debian:stable-slim
 
-# 2. Definir o diretório de trabalho
+# Instalar dependências básicas
+RUN apt-get -qq update && apt-get -qq install --no-install-recommends -y \
+    ca-certificates \
+    wget \
+    curl \
+    iputils-ping \
+    && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 
-# 3. Atualizar pacotes e instalar as dependências necessárias
-# - curl: para descarregar o script de instalação
-# - ca-certificates: para ligações https seguras
-# - iputils-ping: para podermos testar a conectividade com 'ping'
-RUN apt-get update && \
-    apt-get install -y curl ca-certificates iputils-ping && \
-    rm -rf /var/lib/apt/lists/*
+# Instalar Tailscale userspace
+ARG TAILSCALE_VERSION
+ENV TAILSCALE_VERSION=${TAILSCALE_VERSION:-1.64.0}
+RUN wget -q "https://pkgs.tailscale.com/stable/tailscale_${TAILSCALE_VERSION}_amd64.tgz" \
+ && tar xzf tailscale_${TAILSCALE_VERSION}_amd64.tgz --strip-components=1 \
+ && mv tailscale tailscaled /usr/local/bin/ \
+ && rm tailscale_${TAILSCALE_VERSION}_amd64.tgz
 
-# 4. Descarregar e executar o script de instalação oficial do Tailscale
-RUN curl -fsSL https://tailscale.com/install.sh | sh
-
-# 5. Copiar o nosso script de arranque para dentro da imagem
+# Copiar script de inicialização
 COPY start.sh /app/start.sh
-
-# 6. Dar permissão de execução ao script de arranque
 RUN chmod +x /app/start.sh
 
-# 7. Definir o script de arranque como o comando a ser executado quando o contentor iniciar
 CMD ["/app/start.sh"]
