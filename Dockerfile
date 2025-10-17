@@ -6,6 +6,12 @@ RUN apt-get -qq update && apt-get -qq install --no-install-recommends -y \
     wget \
     curl \
     iputils-ping \
+    netcat-traditional \
+    net-tools \
+    iproute2 \
+    postgresql-client \
+    proxychains4 \
+    telnet \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
